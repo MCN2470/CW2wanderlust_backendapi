@@ -1,9 +1,11 @@
 import { Router } from "express";
 import {
   getHotels,
+  getFeaturedHotels,
   addHotel,
   updateHotel,
   deleteHotel,
+  getHotelById,
 } from "../controllers/hotel.controller";
 import { protect, isOperator } from "../middleware/auth.middleware";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -163,5 +165,13 @@ router.put("/:id", protect, isOperator, asyncHandler(updateHotel));
  *         description: Forbidden, user is not an operator
  */
 router.delete("/:id", protect, isOperator, asyncHandler(deleteHotel));
+
+router.route("/featured").get(getFeaturedHotels);
+
+router
+  .route("/:id")
+  .get(getHotelById)
+  .put(protect, isOperator, asyncHandler(updateHotel))
+  .delete(protect, isOperator, asyncHandler(deleteHotel));
 
 export default router;

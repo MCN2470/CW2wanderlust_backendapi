@@ -6,6 +6,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "dev": "npx nodemon src/index.ts",
+    "seed": "ts-node src/seed.ts",
     "test": "jest"
   },
   "keywords": [],

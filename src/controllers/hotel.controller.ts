@@ -53,6 +53,33 @@ export const getHotels = async (req: Request, res: Response) => {
   }
 };
 
+// @desc    Fetch featured hotels from local DB
+// @route   GET /api/hotels/featured
+// @access  Public
+export const getFeaturedHotels = async (req: Request, res: Response) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM hotels ORDER BY id LIMIT 5");
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching featured hotels:", error);
+    res.status(500).json({ message: "Failed to fetch featured hotels." });
+  }
+};
+
+// @desc    Fetch single hotel by ID
+// @route   GET /api/hotels/:id
+// @access  Public
+export const getHotelById = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await pool.query("SELECT * FROM hotels WHERE id = ?", [id]);
+    res.json(rows);
+  } catch (error) {
+    console.error(`Error fetching hotel with id ${id}:`, error);
+    res.status(500).json({ message: "Failed to fetch hotel." });
+  }
+};
+
 // @desc    Add a new hotel
 // @route   POST /api/hotels
 // @access  Private/Operator
