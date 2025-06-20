@@ -1,9 +1,15 @@
 import { Router } from "express";
-import { createBooking } from "../controllers/booking.controller";
-import { protect } from "../middleware/auth.middleware";
+import {
+  createBooking,
+  getAllBookings,
+} from "../controllers/booking.controller";
+import { protect, isOperator } from "../middleware/auth.middleware";
 
 const router = Router();
 
-router.route("/").post(protect, createBooking);
+router
+  .route("/")
+  .post(protect, createBooking)
+  .get(protect, isOperator, getAllBookings);
 
 export default router;

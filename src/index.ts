@@ -11,14 +11,11 @@ import bookingRoutes from "./routes/booking.routes";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import cors from "cors";
-import { initDb } from "./db";
 
 dotenv.config();
 
 const app: Express = express();
 const port = process.env.PORT || 3001;
-
-initDb();
 
 const swaggerOptions = {
   swaggerDefinition: {
@@ -74,24 +71,27 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello, this is the Wanderlust Travel API!");
 });
 
-async function initializeDatabase() {
+const initializeDatabase = async () => {
   try {
+    // Test the connection
     const connection = await pool.getConnection();
     console.log("Successfully connected to the database.");
+    connection.release();
+
+    // Ensure all tables are created
     await createUserTable();
     await createHotelTable();
-    connection.release();
   } catch (error) {
     console.error("Failed to initialize the database:", error);
     process.exit(1);
   }
-}
+};
 
-async function startServer() {
+const startServer = async () => {
   await initializeDatabase();
   app.listen(port, () => {
     console.log(`[server]: Server is running at http://localhost:${port}`);
   });
-}
+};
 
 startServer();

@@ -2,6 +2,13 @@ import { Request, Response } from "express";
 import pool from "../db";
 import { asyncHandler } from "../utils/asyncHandler";
 
+export const getAllBookings = asyncHandler(
+  async (req: Request, res: Response) => {
+    const [rows] = await pool.query("SELECT * FROM bookings");
+    res.status(200).json(rows);
+  }
+);
+
 export const createBooking = asyncHandler(
   async (req: Request, res: Response) => {
     const userId = req.user?.id;

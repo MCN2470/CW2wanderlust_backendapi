@@ -1,14 +1,12 @@
-import { Router } from "express";
+import express from "express";
 import {
   registerUser,
   loginUser,
   getUserProfile,
-  createStaffUser,
 } from "../controllers/user.controller";
-import { asyncHandler } from "../utils/asyncHandler";
-import { protect, operatorProtect } from "../middleware/auth.middleware";
+import { protect } from "../middleware/auth.middleware";
 
-const router = Router();
+const router = express.Router();
 
 /**
  * @swagger
@@ -43,7 +41,7 @@ const router = Router();
  *       409:
  *         description: Username or email already exists
  */
-router.post("/register", asyncHandler(registerUser));
+router.post("/register", registerUser);
 
 /**
  * @swagger
@@ -80,7 +78,7 @@ router.post("/register", asyncHandler(registerUser));
  *       401:
  *         description: Invalid credentials
  */
-router.post("/login", asyncHandler(loginUser));
+router.post("/login", loginUser);
 
 /**
  * @swagger
@@ -96,22 +94,6 @@ router.post("/login", asyncHandler(loginUser));
  *       401:
  *         description: Not authorized
  */
-router.get("/profile", protect, asyncHandler(getUserProfile));
-
-/**
- * @swagger
- * /api/users/staff:
- *   post:
- *     summary: Create a new staff user
- *     tags: [Users]
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       201:
- *         description: Staff user created successfully
- *       401:
- *         description: Not authorized
- */
-router.post("/staff", protect, operatorProtect, asyncHandler(createStaffUser));
+router.get("/profile", protect, getUserProfile);
 
 export default router;
