@@ -7,6 +7,7 @@ import userRoutes from "./routes/user.routes";
 import hotelRoutes from "./routes/hotel.routes";
 import flightRoutes from "./routes/flight.routes";
 import favoriteRoutes from "./routes/favorite.routes";
+import bookingRoutes from "./routes/booking.routes";
 import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import cors from "cors";
@@ -63,6 +64,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/hotels", hotelRoutes);
 app.use("/api/flights", flightRoutes);
 app.use("/api/favorites", favoriteRoutes);
+app.use("/api/bookings", bookingRoutes);
 
 // Swagger Page
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
