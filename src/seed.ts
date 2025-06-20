@@ -117,6 +117,10 @@ const hotels = [
 const seedDatabase = async () => {
   const client = await pool.getConnection();
   try {
+    // Drop the bookings table to ensure schema updates
+    await client.query("DROP TABLE IF EXISTS user_favorites;");
+    await client.query("DROP TABLE IF EXISTS bookings;");
+
     // Ensure tables exist before we do anything
     await createUserTable();
     await createHotelTable();
