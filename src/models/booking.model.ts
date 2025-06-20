@@ -1,6 +1,6 @@
 import pool from "../db";
 
-export const createBookingTable = async () => {
+export const createBookingsTable = async () => {
   const client = await pool.getConnection();
   try {
     await client.query(`

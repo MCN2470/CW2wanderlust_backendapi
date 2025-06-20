@@ -3,9 +3,10 @@ import {
   registerUser,
   loginUser,
   getUserProfile,
+  createStaffUser,
 } from "../controllers/user.controller";
 import { asyncHandler } from "../utils/asyncHandler";
-import { protect } from "../middleware/auth.middleware";
+import { protect, operatorProtect } from "../middleware/auth.middleware";
 
 const router = Router();
 
@@ -96,5 +97,21 @@ router.post("/login", asyncHandler(loginUser));
  *         description: Not authorized
  */
 router.get("/profile", protect, asyncHandler(getUserProfile));
+
+/**
+ * @swagger
+ * /api/users/staff:
+ *   post:
+ *     summary: Create a new staff user
+ *     tags: [Users]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Staff user created successfully
+ *       401:
+ *         description: Not authorized
+ */
+router.post("/staff", protect, operatorProtect, asyncHandler(createStaffUser));
 
 export default router;

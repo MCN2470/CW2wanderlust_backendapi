@@ -2,108 +2,121 @@ import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import pool from "../db";
 import jwt from "jsonwebtoken";
+import { asyncHandler } from "../utils/asyncHandler";
 
-export const registerUser = async (req: Request, res: Response) => {
-  const { username, email, password, role = "public" } = req.body;
+export const registerUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { username, email, password } = req.body;
 
-  if (!username || !email || !password) {
-    return res
-      .status(400)
-      .json({ message: "Username, email, and password are required." });
-  }
+    if (!username || !email || !password) {
+      res.status(400);
+      throw new Error("Please add all fields");
+    }
 
-  try {
+    const [userExists]: any = await pool.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (userExists.length > 0) {
+      res.status(400);
+      throw new Error("User already exists");
+    }
+
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    const query = `
-      INSERT INTO users (username, email, password, role)
-      VALUES (?, ?, ?, ?);
-    `;
-
-    const [result]: any = await pool.query(query, [
-      username,
-      email,
-      hashedPassword,
-      role,
-    ]);
-    const insertId = result.insertId;
-
-    // After successful registration, automatically log the user in and return a token
-    const [newUserRows]: any = await pool.query(
-      "SELECT * FROM users WHERE id = ?",
-      [insertId]
+    const [newUser]: any = await pool.query(
+      "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+      [username, email, hashedPassword, "user"] // Default role is 'user'
     );
-    const user = newUserRows[0];
 
-    const payload = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    };
-
-    const token = jwt.sign(payload, process.env.JWT_SECRET as string, {
-      expiresIn: "1h",
-    });
-
-    res.status(201).json({ token });
-  } catch (error: any) {
-    if (error.code === "ER_DUP_ENTRY") {
-      return res
-        .status(409)
-        .json({ message: "Username or email already exists." });
+    if (newUser.insertId) {
+      res.status(201).json({
+        _id: newUser.insertId,
+        username: username,
+        email: email,
+        role: "user",
+        token: generateToken(newUser.insertId),
+      });
+    } else {
+      res.status(400);
+      throw new Error("Invalid user data");
     }
-    console.error("Error registering user:", error);
-    res.status(500).json({ message: "Server error during user registration." });
   }
-};
+);
 
-export const loginUser = async (req: Request, res: Response) => {
+export const createStaffUser = asyncHandler(
+  async (req: Request, res: Response) => {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      res.status(400);
+      throw new Error("Please add all fields");
+    }
+
+    const [userExists]: any = await pool.query(
+      "SELECT * FROM users WHERE email = ?",
+      [email]
+    );
+
+    if (userExists.length > 0) {
+      res.status(400);
+      throw new Error("User already exists");
+    }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    const [newUser]: any = await pool.query(
+      "INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, ?)",
+      [username, email, hashedPassword, "operator"]
+    );
+
+    if (newUser.insertId) {
+      res.status(201).json({
+        _id: newUser.insertId,
+        username: username,
+        email: email,
+        role: "operator",
+      });
+    } else {
+      res.status(400);
+      throw new Error("Invalid user data");
+    }
+  }
+);
+
+export const loginUser = asyncHandler(async (req: Request, res: Response) => {
   const { email, password } = req.body;
 
-  if (!email || !password) {
-    return res
-      .status(400)
-      .json({ message: "Email and password are required." });
+  const [user]: any = await pool.query("SELECT * FROM users WHERE email = ?", [
+    email,
+  ]);
+
+  if (user.length > 0 && (await bcrypt.compare(password, user[0].password))) {
+    res.json({
+      _id: user[0].id,
+      username: user[0].username,
+      email: user[0].email,
+      role: user[0].role,
+      token: generateToken(user[0].id),
+    });
+  } else {
+    res.status(401);
+    throw new Error("Invalid credentials");
   }
+});
 
-  try {
-    const query = "SELECT * FROM users WHERE email = ?";
-    const [rows]: any = await pool.query(query, [email]);
-
-    if (rows.length === 0) {
-      return res.status(401).json({ message: "Invalid credentials." });
-    }
-
-    const user = rows[0];
-
-    const isMatch = await bcrypt.compare(password, user.password);
-
-    if (!isMatch) {
-      return res.status(401).json({ message: "Invalid credentials." });
-    }
-
-    const payload = {
-      id: user.id,
-      username: user.username,
-      role: user.role,
-    };
-
-    const token = jwt.sign(
-      payload,
-      process.env.JWT_SECRET as string,
-      { expiresIn: "1h" } // Token expires in 1 hour
-    );
-
-    res.json({ token });
-  } catch (error) {
-    console.error("Error logging in user:", error);
-    res.status(500).json({ message: "Server error during user login." });
-  }
+// Generate JWT
+const generateToken = (id: number) => {
+  return jwt.sign({ id }, process.env.JWT_SECRET as string, {
+    expiresIn: "30d",
+  });
 };
 
-export const getUserProfile = async (req: Request, res: Response) => {
-  // If we get here, the 'protect' middleware has already run and
-  // attached the user payload to the request.
-  res.json(req.user);
-};
+export const getUserProfile = asyncHandler(
+  async (req: Request, res: Response) => {
+    res.json(req.user);
+  }
+);

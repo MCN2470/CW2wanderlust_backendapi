@@ -53,3 +53,14 @@ export const isOperator = (req: Request, res: Response, next: NextFunction) => {
     res.status(403).json({ message: "Not authorized as an operator" });
   }
 };
+
+export const operatorProtect = asyncHandler(
+  async (req: Request, res: Response, next: NextFunction) => {
+    if (req.user && req.user.role === "operator") {
+      next();
+    } else {
+      res.status(403);
+      throw new Error("Not authorized as an operator");
+    }
+  }
+);

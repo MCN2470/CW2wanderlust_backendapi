@@ -7,7 +7,7 @@ export const createUserTable = async () => {
       username VARCHAR(255) NOT NULL UNIQUE,
       email VARCHAR(255) NOT NULL UNIQUE,
       password VARCHAR(255) NOT NULL,
-      role ENUM('public', 'operator') NOT NULL DEFAULT 'public',
+      role ENUM('user', 'operator') NOT NULL DEFAULT 'user',
       profile_photo_url VARCHAR(255),
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
