@@ -2,8 +2,21 @@ import { Request, Response } from "express";
 import pool from "../db";
 import * as HotelbedsService from "../services/hotelbeds.service";
 
-// @desc    Fetch all hotels with filtering
+// @desc    Fetch all hotels from DB
 // @route   GET /api/hotels
+// @access  Public
+export const getAllHotelsFromDB = async (req: Request, res: Response) => {
+  try {
+    const [rows] = await pool.query("SELECT * FROM hotels");
+    res.json(rows);
+  } catch (error) {
+    console.error("Error fetching hotels from DB:", error);
+    res.status(500).json({ message: "Failed to fetch hotels." });
+  }
+};
+
+// @desc    Fetch all hotels with filtering from Hotelbeds
+// @route   GET /api/hotels/search
 // @access  Public
 export const getHotels = async (req: Request, res: Response) => {
   let { destinationCode, checkIn, checkOut, adults, children, rooms } =
@@ -20,6 +33,15 @@ export const getHotels = async (req: Request, res: Response) => {
   }
 
   try {
+    console.log("Hotel search parameters:", {
+      destinationCode,
+      checkIn,
+      checkOut,
+      adults,
+      children,
+      rooms,
+    });
+
     const data = await HotelbedsService.searchHotelsByDestination(
       destinationCode as string,
       checkIn as string,
@@ -29,7 +51,10 @@ export const getHotels = async (req: Request, res: Response) => {
       parseInt(rooms as string, 10)
     );
 
+    console.log("Hotelbeds API response:", JSON.stringify(data, null, 2));
+
     if (!data.hotels || data.hotels.hotels.length === 0) {
+      console.log("No hotels found in API response");
       return res.json({ hotels: [] });
     }
 
@@ -49,7 +74,15 @@ export const getHotels = async (req: Request, res: Response) => {
     res.json({ hotels: hotelsWithImages });
   } catch (error) {
     console.error("Error in getHotels controller:", error);
-    res.status(500).json({ message: "Failed to fetch hotels from provider." });
+
+    // Don't fallback to local hotels - this page is for external hotel search only
+    console.log("External hotel search API is unavailable");
+    res.status(503).json({
+      message: "Hotel search service is temporarily unavailable",
+      error:
+        "External hotel booking API is currently down. Please try again later.",
+      hotels: [],
+    });
   }
 };
 
@@ -84,6 +117,8 @@ export const getHotelById = async (req: Request, res: Response) => {
 // @route   POST /api/hotels
 // @access  Private/Operator
 export const addHotel = async (req: Request, res: Response) => {
+  console.log("Raw request body:", req.body);
+
   const {
     name,
     address,
@@ -92,6 +127,19 @@ export const addHotel = async (req: Request, res: Response) => {
     description,
     price_per_night,
     image_url,
+    availability,
+    star_rating,
+    rating_text,
+    rating_score,
+    review_count,
+    location_score,
+    distance_from_downtown,
+    room_type,
+    room_beds,
+    breakfast_included,
+    free_cancellation,
+    no_prepayment_needed,
+    promo_message,
   } = req.body;
 
   if (!name || !address || !city || !country || !price_per_night) {
@@ -101,20 +149,46 @@ export const addHotel = async (req: Request, res: Response) => {
   }
 
   const query = `
-    INSERT INTO hotels (name, address, city, country, description, price_per_night, image_url)
-    VALUES (?, ?, ?, ?, ?, ?, ?);
+    INSERT INTO hotels (name, address, city, country, description, price_per_night, image_url, availability, star_rating, rating_text, rating_score, review_count, location_score, distance_from_downtown, room_type, room_beds, breakfast_included, free_cancellation, no_prepayment_needed, promo_message)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
   `;
-  const [result]: any = await pool.query(query, [
+
+  const parseBoolean = (value: any) => /^(true|1)$/i.test(value);
+
+  const values = [
     name,
     address,
     city,
     country,
     description,
-    price_per_night,
+    parseFloat(price_per_night),
     image_url,
+    parseBoolean(availability),
+    parseInt(star_rating, 10),
+    rating_text,
+    parseFloat(rating_score),
+    parseInt(review_count, 10),
+    parseFloat(location_score),
+    distance_from_downtown,
+    room_type,
+    parseInt(room_beds, 10),
+    parseBoolean(breakfast_included),
+    parseBoolean(free_cancellation),
+    parseBoolean(no_prepayment_needed),
+    promo_message,
+  ];
+
+  console.log("Processed values for database:", values);
+
+  const [result]: any = await pool.query(query, values);
+
+  const [rows]: any = await pool.query("SELECT * FROM hotels WHERE id = ?", [
+    result.insertId,
   ]);
 
-  res.status(201).json({ id: result.insertId, ...req.body });
+  console.log("Hotel saved to database:", rows[0]);
+
+  res.status(201).json(rows[0]);
 };
 
 // @desc    Update a hotel
@@ -122,36 +196,76 @@ export const addHotel = async (req: Request, res: Response) => {
 // @access  Private/Operator
 export const updateHotel = async (req: Request, res: Response) => {
   const { id } = req.params;
-  const {
-    name,
-    address,
-    city,
-    country,
-    description,
-    price_per_night,
-    image_url,
-    availability,
-  } = req.body;
+  const fieldsToUpdate = req.body;
 
-  const query = `
-    UPDATE hotels SET
-      name = ?, address = ?, city = ?, country = ?, description = ?,
-      price_per_night = ?, image_url = ?, availability = ?
-    WHERE id = ?;
-  `;
-  await pool.query(query, [
-    name,
-    address,
-    city,
-    country,
-    description,
-    price_per_night,
-    image_url,
-    availability,
+  const validFields = [
+    "name",
+    "address",
+    "city",
+    "country",
+    "description",
+    "price_per_night",
+    "image_url",
+    "availability",
+    "star_rating",
+    "rating_text",
+    "rating_score",
+    "review_count",
+    "location_score",
+    "distance_from_downtown",
+    "room_type",
+    "room_beds",
+    "breakfast_included",
+    "free_cancellation",
+    "no_prepayment_needed",
+    "promo_message",
+  ];
+
+  const numericFields = [
+    "price_per_night",
+    "star_rating",
+    "rating_score",
+    "review_count",
+    "location_score",
+    "room_beds",
+  ];
+  const booleanFields = [
+    "availability",
+    "breakfast_included",
+    "free_cancellation",
+    "no_prepayment_needed",
+  ];
+  const parseBoolean = (value: any) => /^(true|1)$/i.test(value);
+
+  const updates = Object.keys(fieldsToUpdate)
+    .filter((key) => validFields.includes(key) && fieldsToUpdate[key] != null)
+    .map((key) => `${key} = ?`);
+
+  if (updates.length === 0) {
+    return res.status(400).json({ message: "No valid fields to update." });
+  }
+
+  const values = Object.keys(fieldsToUpdate)
+    .filter((key) => validFields.includes(key) && fieldsToUpdate[key] != null)
+    .map((key) => {
+      let value = fieldsToUpdate[key];
+      if (numericFields.includes(key)) {
+        return parseFloat(value);
+      }
+      if (booleanFields.includes(key)) {
+        return parseBoolean(value);
+      }
+      return value;
+    });
+
+  const query = `UPDATE hotels SET ${updates.join(", ")} WHERE id = ?;`;
+  await pool.query(query, [...values, id]);
+
+  const [rows]: any = await pool.query("SELECT * FROM hotels WHERE id = ?", [
     id,
   ]);
 
-  res.json({ message: "Hotel updated successfully." });
+  res.json(rows[0]);
 };
 
 // @desc    Delete a hotel

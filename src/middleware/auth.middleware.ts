@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { asyncHandler } from "../utils/asyncHandler";
+import pool from "../db";
 
 // We need to add the 'user' property to the Express Request type
 declare global {
@@ -16,31 +17,51 @@ const protectMiddleware = async (
   res: Response,
   next: NextFunction
 ) => {
+  console.log("--- Executing Protect Middleware ---");
   let token;
 
   if (
     req.headers.authorization &&
-    req.headers.authorization.startsWith("Bearer")
+    req.headers.authorization.startsWith("Bearer ")
   ) {
     try {
+      console.log("Authorization header found.");
       // Get token from header
       token = req.headers.authorization.split(" ")[1];
+      console.log("Token received:", token);
 
       // Verify token
-      const decoded = jwt.verify(token, process.env.JWT_SECRET as string);
+      const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as {
+        id: number;
+      };
+      console.log("Token decoded successfully. User ID:", decoded.id);
 
-      // Attach user to the request object
-      req.user = decoded;
+      // Get user from the token and attach to request
+      const [rows]: any = await pool.query(
+        "SELECT id, username, email, role, profile_photo_url FROM users WHERE id = ?",
+        [decoded.id]
+      );
+      console.log("Database query for user executed.");
 
-      next();
+      if (rows.length === 0) {
+        console.log("User not found in DB for ID:", decoded.id);
+        return res
+          .status(401)
+          .json({ message: "Not authorized, user not found" });
+      }
+      req.user = rows[0];
+      console.log("User attached to request object:", req.user);
+
+      return next();
     } catch (error) {
-      res.status(401).json({ message: "Not authorized, token failed" });
-      return;
+      console.error("!!! Error in protect middleware:", error);
+      return res.status(401).json({ message: "Not authorized, token failed" });
     }
   }
 
   if (!token) {
-    res.status(401).json({ message: "Not authorized, no token" });
+    console.log("No token found in request.");
+    return res.status(401).json({ message: "Not authorized, no token" });
   }
 };
 

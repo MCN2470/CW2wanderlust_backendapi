@@ -6,6 +6,7 @@ import {
   updateHotel,
   deleteHotel,
   getHotelById,
+  getAllHotelsFromDB,
 } from "../controllers/hotel.controller";
 import { protect, isOperator } from "../middleware/auth.middleware";
 import { asyncHandler } from "../utils/asyncHandler";
@@ -65,7 +66,8 @@ const router = Router();
  *                   price_per_night:
  *                     type: number
  */
-router.get("/", asyncHandler(getHotels));
+router.get("/", asyncHandler(getAllHotelsFromDB));
+router.get("/search", asyncHandler(getHotels));
 
 /**
  * @swagger
@@ -166,12 +168,8 @@ router.put("/:id", protect, isOperator, asyncHandler(updateHotel));
  */
 router.delete("/:id", protect, isOperator, asyncHandler(deleteHotel));
 
-router.route("/featured").get(getFeaturedHotels);
+router.get("/featured", asyncHandler(getFeaturedHotels));
 
-router
-  .route("/:id")
-  .get(getHotelById)
-  .put(protect, isOperator, asyncHandler(updateHotel))
-  .delete(protect, isOperator, asyncHandler(deleteHotel));
+router.get("/:id", asyncHandler(getHotelById));
 
 export default router;

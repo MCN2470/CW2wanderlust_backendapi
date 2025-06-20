@@ -3,10 +3,21 @@ import {
   registerUser,
   loginUser,
   getUserProfile,
+  updateUserProfile,
+  getUserById,
 } from "../controllers/user.controller";
 import { protect } from "../middleware/auth.middleware";
+import upload from "../middleware/upload.middleware";
 
 const router = express.Router();
+
+// CATCH-ALL LOGGER FOR THIS ROUTER
+router.use((req, res, next) => {
+  console.log(
+    `>>> Request received in user.routes.ts: ${req.method} ${req.path}`
+  );
+  next();
+});
 
 /**
  * @swagger
@@ -95,5 +106,9 @@ router.post("/login", loginUser);
  *         description: Not authorized
  */
 router.get("/profile", protect, getUserProfile);
+
+router.put("/:id", protect, upload, updateUserProfile);
+
+router.get("/:id", getUserById);
 
 export default router;

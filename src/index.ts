@@ -1,6 +1,9 @@
-import express, { Express, Request, Response } from "express";
 import dotenv from "dotenv";
+dotenv.config();
+
+import express, { Express, Request, Response } from "express";
 import pool from "./db";
+import morgan from "morgan";
 import { createUserTable } from "./models/user.model";
 import { createHotelTable } from "./models/hotel.model";
 import userRoutes from "./routes/user.routes";
@@ -12,10 +15,11 @@ import swaggerJSDoc from "swagger-jsdoc";
 import swaggerUi from "swagger-ui-express";
 import cors from "cors";
 
-dotenv.config();
-
 const app: Express = express();
 const port = process.env.PORT || 3001;
+
+// Use morgan for request logging in development mode
+app.use(morgan("dev"));
 
 const swaggerOptions = {
   swaggerDefinition: {
@@ -55,6 +59,9 @@ app.use(cors());
 
 // Middleware to parse JSON bodies
 app.use(express.json());
+
+// Serve static files from the 'public' directory
+app.use(express.static("public"));
 
 // API Routes
 app.use("/api/users", userRoutes);

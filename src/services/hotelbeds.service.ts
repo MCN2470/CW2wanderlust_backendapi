@@ -1,11 +1,8 @@
 import axios, { InternalAxiosRequestConfig } from "axios";
 import crypto from "crypto";
-import dotenv from "dotenv";
 
-dotenv.config();
-
-const API_KEY = process.env.HOTELBEDS_API_KEY;
-const API_SECRET = process.env.HOTELBEDS_SHARED_SECRET;
+const API_KEY = "0bbfcf4726eed4c7e4ffff83b4f05102";
+const API_SECRET = "1d6d95b307";
 const API_BASE_URL = "https://api.test.hotelbeds.com";
 
 if (!API_KEY || !API_SECRET) {
