@@ -1,6 +1,7 @@
 import mysql from "mysql2/promise";
 import { createHotelTable } from "./models/hotel.model";
 import { createUserTable } from "./models/user.model";
+import { createMessagesTable } from "./models/message.model";
 
 const pool = mysql.createPool({
   host: "localhost",
@@ -14,8 +15,9 @@ const pool = mysql.createPool({
 
 export const initDb = async () => {
   try {
-    await createHotelTable();
     await createUserTable();
+    await createHotelTable();
+    await createMessagesTable();
     console.log("Database tables checked/created successfully.");
   } catch (error) {
     console.error("Error initializing database:", error);
